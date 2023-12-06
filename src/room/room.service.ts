@@ -1,8 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Injectable, Scope } from '@nestjs/common';
 import { Socket } from 'socket.io';
-import { Player } from '../entity/player.entyti';
+import { Player } from '../entity/player.entity';
 import { Snake } from '../entity/snake.entity';
+import RoomEntity from "../entity/room.entity";
 
 interface PlayerRoom {
   snake: Snake;
@@ -19,7 +20,7 @@ interface Room {
 @Injectable({ scope: Scope.DEFAULT })
 export class RoomService {
   private readonly players: Map<string, Player> = new Map();
-  private readonly rooms: Map<string, Room> = new Map();
+  private readonly rooms: Map<string, RoomEntity> = new Map();
 
   constructor() {}
 
@@ -34,9 +35,10 @@ export class RoomService {
   }
 
   public createRoom() {
-    this.rooms.set(uuidv4(), { isPause: true, lifeTime: 0, players: [], eat: [] });
+    const roomId = uuidv4();
+    this.rooms.set(roomId, new RoomEntity(roomId));
   }
-  public removeRoom(uuid) {
+  public removeRoom(uuid: string) {
     this.rooms.delete(uuid);
   }
 
@@ -50,11 +52,7 @@ export class RoomService {
     const [currentRoomKey] = this.rooms.keys();
     const currentRoom = this.rooms.get(currentRoomKey);
 
-    console.log(currentRoomKey, currentRoom);
-    currentRoom.players.push({
-      snake: new Snake(player.getSocket().id, 2 + this.getRandomSnakePosition(2, 26), 20),
-      score: 0,
-    });
+    currentRoom.snakes.push(new Snake(player,2 + this.getRandomSnakePosition(2, 26), 20));
 
     this.rooms.set(currentRoomKey, currentRoom);
 
@@ -75,6 +73,6 @@ export class RoomService {
   }
 
   public getRoom(roomID) {
-    return this.rooms.get(roomID);
+    return this.rooms.get(roomID).serialize();
   }
 }
