@@ -26,12 +26,14 @@ export default class RoomEntity {
   }
 
   public addUser(user: UserEntity) {
-    user.addRoom(this.id);
-    user.getSocket().broadcast.to(this.id).emit('joined', {});
-    this.players.set(
-      user.getID(),
-      new Player(user, new SnakeEntity(8 + this.players.size * 2, 10, DirectionsEnum.UP)),
+    const player = new Player(
+      user,
+      new SnakeEntity(8 + this.players.size * 2, 10, DirectionsEnum.UP),
     );
+    user.addRoom(this.id);
+
+    user.getSocket().broadcast.to(this.id).emit('joined-player', player.serialize());
+    this.players.set(user.getID(), player);
   }
 
   public getID() {
