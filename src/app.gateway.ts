@@ -11,6 +11,8 @@ import {
 } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
 import { RoomService } from './room/room.service';
+import { DirectionsEnum } from './entity/snake.entity';
+import { UserEntity } from './entity/user.entity';
 
 @WebSocketGateway({
   namespace: 'snake',
@@ -29,21 +31,38 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
     this.server.emit('recMessage', 'payload');
   }
 
-  afterInit(server: Server) {
-    //Выполняем действия
-  }
+  afterInit(server: Server) {}
 
-  handleDisconnect(client: Socket) {
-    this.roomService.removePlayer(client.id);
-  }
+  handleDisconnect(client: Socket) {}
 
   handleConnection(client: Socket, ...args: any[]) {
-    this.roomService.addPlayer(client);
+    console.log(client.id);
+    client.emit('connected', client.id);
   }
 
   @SubscribeMessage('start-game')
   startGame(@ConnectedSocket() client: Socket): WsResponse<unknown> {
-    const roomID = this.roomService.addPlayerToRoom(client.id);
-    return { event: 'joined-room', data: { room: this.roomService.getRoom(roomID) } };
+    const room = this.roomService.getRoom(this.server);
+    room.addUser(new UserEntity({ socket: client, name: 'test' }));
+    return {
+      event: 'joined-room',
+      data: {
+        map: room.getMap(),
+        eat: [],
+        players: room.getPlayers(),
+      },
+    };
+    // const room = this.roomService.addPlayerToRoom(client.id);
+    // return { event: 'joined-room', data: { id: client.id, room: room.serialize() } };
+  }
+
+  @SubscribeMessage('direction')
+  changeDirection(
+    @ConnectedSocket() client: Socket,
+    @MessageBody('direction') direction: DirectionsEnum,
+  ) {
+    this.roomService.getFirstRoom().getPlayer(client.id).getSnake().setDirection(direction);
+    // const [_s, roomID] = client.rooms.keys();
+    // this.roomService.getRoom(roomID).snakes.get(client.id).setDirection(direction);
   }
 }

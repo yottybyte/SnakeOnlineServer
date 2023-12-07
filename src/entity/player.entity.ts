@@ -1,18 +1,35 @@
-import { Socket } from 'socket.io';
-import {IStateSerialize} from "../interfaces/IStateSerialize";
+import { UserEntity } from './user.entity';
+import { SnakeEntity } from './snake.entity';
 
-export class Player implements IStateSerialize{
-  private readonly socket: Socket;
+export class Player {
+  private score: number = 0;
+  private user: UserEntity;
+  private snake: SnakeEntity;
 
-  constructor(socket: Socket) {
-    this.socket = socket;
+  constructor(user: UserEntity, snake: SnakeEntity) {
+    this.user = user;
+    this.snake = snake;
   }
 
-  public getSocket() {
-    return this.socket;
+  public getUser() {
+    return this.user;
   }
 
-  serialize(): any {
-    return null;
+  public getSnake() {
+    return this.snake;
   }
+
+  public serialize() {
+    return {
+      id: this.user.getID(),
+      name: this.user.getName(),
+      score: this.score,
+      snake: this.snake.serialize(),
+    };
+  }
+
+  //
+  // private emitEvent(roomID: string, event: string, data: any) {
+  //   this.user.emitEventToUserRoom(roomID, event, data);
+  // }
 }

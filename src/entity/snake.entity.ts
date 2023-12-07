@@ -1,6 +1,5 @@
-import { IStepGameLoop } from '../interfaces/IStepGameLoop';
-import {Player} from "./player.entity";
-import {IStateSerialize} from "../interfaces/IStateSerialize";
+import { v4 as uuidv4 } from 'uuid';
+import { stringToColour } from '../utils/stringToColour';
 
 export enum DirectionsEnum {
   UP = 'up',
@@ -9,28 +8,36 @@ export enum DirectionsEnum {
   RIGHT = 'right',
 }
 
-export class Snake implements IStepGameLoop, IStateSerialize {
+export interface ISnakeBody {
+  x: number;
+  y: number;
+  direction: DirectionsEnum;
+  ceil: null;
+}
+
+export class SnakeEntity {
   private readonly SPEED: number = 1;
 
   private readonly id: string;
-  public readonly player: Player;
   private readonly color: number;
-  private body: { mX: number; mY: number; direction: DirectionsEnum }[] = [];
+  private body: ISnakeBody[] = [];
   private direction: DirectionsEnum;
 
-  constructor(player: Player, mX: number, mY: number) {
-    this.player = player;
-    this.id = player.getSocket().id;
-    this.color = Snake.stringToColour(player.getSocket().id);
-    this.direction = DirectionsEnum.UP;
+  constructor(mX: number, mY: number, initialDirection: DirectionsEnum) {
+    this.id = uuidv4();
+    this.color = stringToColour(this.id);
+    this.direction = initialDirection;
 
     this.createBody(mX, mY);
-
-    this.player.getSocket().emit('create-id', {
-      id: this.player.getSocket().id,
-    })
+    //
+    //   // TODO: Удалить нахой
+    //   setTimeout(() => {
+    //     this.player.getSocket().emit('create-id', {
+    //       id: this.player.getSocket().id,
+    //     });
+    //   }, 300);
   }
-
+  //
   public setDirection(newDirection: DirectionsEnum) {
     if (
       (this.direction === DirectionsEnum.UP && newDirection === DirectionsEnum.DOWN) ||
@@ -59,26 +66,9 @@ export class Snake implements IStepGameLoop, IStateSerialize {
   private createBody(x: number, y: number) {
     this.body = [];
     for (let i = 1; i <= 3; i++) {
-      this.body.push({mX: x, mY: y + i, direction: DirectionsEnum.UP});
+      this.body.push({ x: x, y: y + i, direction: DirectionsEnum.UP, ceil: null });
     }
   }
-
-  // Никто не знает как это работает, НИКОГДА НЕ ТРОГАТЬ
-  private static stringToColour = (str: string): number => {
-    let hash = 0;
-    str.split('').forEach((char) => {
-      hash = char.charCodeAt(0) + ((hash << 5) - hash);
-    });
-    let colour = '#';
-    for (let i = 0; i < 3; i++) {
-      const value = (hash >> (i * 8)) & 0xff;
-      colour += value.toString(16).padStart(2, '0');
-    }
-    colour = colour.replace('#', '');
-    colour = `0x${colour}`;
-
-    return +colour;
-  };
 
   public gameStep() {
     for (let i = this.body.length - 1; i >= 0; i--) {
@@ -86,40 +76,33 @@ export class Snake implements IStepGameLoop, IStateSerialize {
       if (i === 0) {
         switch (this.direction) {
           case 'up':
-            this.body[i].mY -= this.SPEED;
+            this.body[i].y -= this.SPEED;
             break;
           case 'down':
-            this.body[i].mY += this.SPEED;
+            this.body[i].y += this.SPEED;
             break;
           case 'left':
-            this.body[i].mX -= this.SPEED;
+            this.body[i].x -= this.SPEED;
             break;
           case 'right':
-            this.body[i].mX += this.SPEED;
+            this.body[i].x += this.SPEED;
             break;
         }
         this.body[i].direction = this.direction;
         break;
       }
 
-      this.body[i].mX = this.body[i - 1].mX;
-      this.body[i].mY = this.body[i - 1].mY;
+      this.body[i].x = this.body[i - 1].x;
+      this.body[i].y = this.body[i - 1].y;
       this.body[i].direction = this.body[i - 1].direction;
     }
   }
 
-  serialize(): any {
+  public serialize() {
     return {
-      id: this.id,
-      color: this.color,
-      needsUpdate: true,
-      body: this.body.map(ceil => {
-        return {
-          mx: ceil.mX,
-          my: ceil.mY,
-          d: ceil.direction
-        }
-      })
-    }
+      color: this.getColor(),
+      direction: this.getDirection(),
+      body: this.body,
+    };
   }
 }
