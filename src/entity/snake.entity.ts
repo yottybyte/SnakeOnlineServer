@@ -65,7 +65,7 @@ export class SnakeEntity {
 
   private createBody(x: number, y: number) {
     this.body = [];
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 1; i <= 5; i++) {
       this.body.push({ x: x, y: y + i, direction: DirectionsEnum.UP, ceil: null });
     }
   }

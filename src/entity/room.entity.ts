@@ -8,17 +8,18 @@ import { Server } from 'socket.io';
 export default class RoomEntity {
   private server: Server;
 
-  private readonly STEP_INTERVAL = 200;
+  private readonly STEP_INTERVAL = 50;
 
   private readonly id: string;
   private readonly map: MapEntity;
   private readonly players: Map<string, Player> = new Map();
+  private lifeTime: number = 0;
 
   constructor(users: UserEntity[], server: Server) {
     this.server = server;
     this.id = uuidv4();
 
-    this.map = new MapEntity(128, 128);
+    this.map = new MapEntity(64, 64);
 
     users.forEach((user) => {
       this.addUser(user);
@@ -62,8 +63,8 @@ export default class RoomEntity {
   public async startGameLoop() {
     while (true) {
       const startTime = Date.now();
-      if (this.players.size > 1) {
-        this.handleGameLoop(startTime);
+      if (this.players.size > 0) {
+        this.handleGameLoop(this.lifeTime);
         this.server.to(this.id).emit('step', {
           time: startTime,
           eat: [],
@@ -71,13 +72,24 @@ export default class RoomEntity {
         });
       }
       const diffTime = Date.now() - startTime;
+      this.lifeTime += this.STEP_INTERVAL;
       await this.snooze(this.STEP_INTERVAL - diffTime);
     }
   }
 
   private handleGameLoop(time: number) {
     for (const player of this.players.values()) {
-      player.getSnake().gameStep();
+      if (time % 200 === 0) {
+        player.getSnake().gameStep();
+      }
+      if (time % 100 === 0) {
+        // Змейки с ускорением
+      }
+      if (time % 100 === 0) {
+        // Снаряды
+      }
+
+      // Все остальное (колизии, еда, и прочее)
     }
 
     // for (const player of this.players.values()) {
