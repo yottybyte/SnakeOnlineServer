@@ -1,14 +1,17 @@
 import { UserEntity } from './user.entity';
 import { SnakeEntity } from './snake.entity';
+import RoomEntity from "./room.entity";
 
 export class Player {
   private score: number = 0;
   private readonly user: UserEntity;
   private readonly snake: SnakeEntity;
+  private readonly room: RoomEntity;
 
-  constructor(user: UserEntity, snake: SnakeEntity) {
+  constructor(room: RoomEntity, user: UserEntity, snake: SnakeEntity) {
     this.user = user;
     this.snake = snake;
+    this.room = room;
   }
 
   public getUser() {
@@ -27,9 +30,4 @@ export class Player {
       snake: this.snake.serialize(),
     };
   }
-
-  //
-  // private emitEvent(roomID: string, event: string, data: any) {
-  //   this.user.emitEventToUserRoom(roomID, event, data);
-  // }
 }

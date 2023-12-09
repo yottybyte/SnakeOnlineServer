@@ -66,4 +66,11 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
   ) {
     this.roomService.getFirstRoom().getPlayer(client.id).getSnake().activateSpeedBonus();
   }
+
+  @SubscribeMessage('shot')
+  createShot(
+    @ConnectedSocket() client: Socket,
+  ) {
+    this.roomService.getFirstRoom().getPlayer(client.id).getSnake().spawnBullet();
+  }
 }

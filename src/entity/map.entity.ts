@@ -5,6 +5,8 @@ export enum MapItemTypeEnum {
 }
 
 export interface IMapPhysicalItem  {
+  x: number;
+  y: number;
   type: MapItemTypeEnum;
 }
 
@@ -23,7 +25,7 @@ export interface IMap {
 }
 
 export class MapEntity {
-  private map: IMap;
+  private readonly map: IMap;
 
   constructor(width: number, height: number) {
     this.map = {
@@ -40,10 +42,16 @@ export class MapEntity {
     const h = height * 2;
     for (let i = 0; i < h; i++) {
       for (let j = 0; j < w; j++) {
+        let type = MapItemTypeEnum.EMPTY;
+        if (i === 0 || i === h - 1 || j === 0 || j === w - 1) {
+          type = MapItemTypeEnum.SOLID;
+        }
+
+
         items.push({
           x: j,
           y: i,
-          type: MapItemTypeEnum.EMPTY
+          type: type,
         });
       }
     }
