@@ -25,12 +25,6 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
 
   @WebSocketServer()
   server: Server;
-
-  @SubscribeMessage('sendMessage')
-  async handleSendMessage(client: Socket): Promise<void> {
-    this.server.emit('recMessage', 'payload');
-  }
-
   afterInit(server: Server) {}
 
   handleDisconnect(client: Socket) {}
@@ -41,7 +35,7 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
   }
 
   @SubscribeMessage('start-game')
-  startGame(@ConnectedSocket() client: Socket): WsResponse<unknown> {
+  startGame(@ConnectedSocket() client: Socket) {
     const room = this.roomService.getRoom(this.server);
     room.addUser(new UserEntity({ socket: client, name: 'test' }));
     return {
@@ -64,5 +58,12 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
     this.roomService.getFirstRoom().getPlayer(client.id).getSnake().setDirection(direction);
     // const [_s, roomID] = client.rooms.keys();
     // this.roomService.getRoom(roomID).snakes.get(client.id).setDirection(direction);
+  }
+
+  @SubscribeMessage('speedBonus')
+  activateSpeedBonus(
+    @ConnectedSocket() client: Socket,
+  ) {
+    this.roomService.getFirstRoom().getPlayer(client.id).getSnake().activateSpeedBonus();
   }
 }

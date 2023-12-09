@@ -4,10 +4,13 @@ export enum MapItemTypeEnum {
   EMPTY = 'empty',
 }
 
+export interface IMapPhysicalItem  {
+  type: MapItemTypeEnum;
+}
+
 export interface IMapItem {
   x: number;
   y: number;
-  type: MapItemTypeEnum;
   texture: MapItemTextureEnum;
 }
 
@@ -16,6 +19,7 @@ export interface IMap {
   height: number;
 
   items: IMapItem[];
+  physicalItems: IMapPhysicalItem[];
 }
 
 export class MapEntity {
@@ -25,11 +29,29 @@ export class MapEntity {
     this.map = {
       width: width,
       height: height,
-      items: this.magGenerate(width, height),
+      items: this.mapGenerate(width, height),
+      physicalItems: this.physicalMapGenerate(width, height),
     };
   }
 
-  private magGenerate(width: number, height: number) {
+  private physicalMapGenerate(width: number, height: number): IMapPhysicalItem[] {
+    const items = [];
+    const w = width * 2;
+    const h = height * 2;
+    for (let i = 0; i < h; i++) {
+      for (let j = 0; j < w; j++) {
+        items.push({
+          x: j,
+          y: i,
+          type: MapItemTypeEnum.EMPTY
+        });
+      }
+    }
+
+    return items;
+  }
+
+  private mapGenerate(width: number, height: number): IMapItem[] {
     const arr = [];
     const w = width - 1;
     const h = height - 1;
@@ -67,7 +89,6 @@ export class MapEntity {
           x: j,
           y: i,
           texture: texture,
-          type: texture !== 5 ? MapItemTypeEnum.SOLID : MapItemTypeEnum.EMPTY,
         });
       }
     }

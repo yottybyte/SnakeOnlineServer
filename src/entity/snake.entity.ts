@@ -11,8 +11,6 @@ export enum DirectionsEnum {
 export interface ISnakeBody {
   x: number;
   y: number;
-  direction: DirectionsEnum;
-  ceil: null;
 }
 
 export class SnakeEntity {
@@ -22,6 +20,7 @@ export class SnakeEntity {
   private readonly color: number;
   private body: ISnakeBody[] = [];
   private direction: DirectionsEnum;
+  private isSpeedBonus: boolean = false;
 
   constructor(mX: number, mY: number, initialDirection: DirectionsEnum) {
     this.id = uuidv4();
@@ -29,15 +28,22 @@ export class SnakeEntity {
     this.direction = initialDirection;
 
     this.createBody(mX, mY);
-    //
-    //   // TODO: Удалить нахой
-    //   setTimeout(() => {
-    //     this.player.getSocket().emit('create-id', {
-    //       id: this.player.getSocket().id,
-    //     });
-    //   }, 300);
   }
-  //
+
+  public activateSpeedBonus() {
+    if (this.isSpeedBonus) {
+      return;
+    }
+    this.isSpeedBonus = true;
+    setTimeout(() => {
+      this.isSpeedBonus = false;
+    }, 500);
+  }
+
+  public isSpeedBonusActive(): boolean {
+    return this.isSpeedBonus;
+  }
+
   public setDirection(newDirection: DirectionsEnum) {
     if (
       (this.direction === DirectionsEnum.UP && newDirection === DirectionsEnum.DOWN) ||
@@ -66,7 +72,7 @@ export class SnakeEntity {
   private createBody(x: number, y: number) {
     this.body = [];
     for (let i = 1; i <= 5; i++) {
-      this.body.push({ x: x, y: y + i, direction: DirectionsEnum.UP, ceil: null });
+      this.body.push({ x: x, y: y + i});
     }
   }
 
@@ -88,13 +94,11 @@ export class SnakeEntity {
             this.body[i].x += this.SPEED;
             break;
         }
-        this.body[i].direction = this.direction;
         break;
       }
 
       this.body[i].x = this.body[i - 1].x;
       this.body[i].y = this.body[i - 1].y;
-      this.body[i].direction = this.body[i - 1].direction;
     }
   }
 

@@ -3,8 +3,8 @@ import { SnakeEntity } from './snake.entity';
 
 export class Player {
   private score: number = 0;
-  private user: UserEntity;
-  private snake: SnakeEntity;
+  private readonly user: UserEntity;
+  private readonly snake: SnakeEntity;
 
   constructor(user: UserEntity, snake: SnakeEntity) {
     this.user = user;
