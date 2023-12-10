@@ -36,6 +36,10 @@ export class MapEntity {
     };
   }
 
+  public getSpawners() {
+
+  }
+
   private physicalMapGenerate(width: number, height: number): IMapPhysicalItem[] {
     const items = [];
     const w = width * 2;
