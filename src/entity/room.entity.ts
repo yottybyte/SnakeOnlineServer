@@ -58,9 +58,10 @@ export default class RoomEntity {
   private handleGameLoop(time: number) {
     if (time % 1000 === 0) {
       this.server.to(this.id).emit('time-sec');
+      console.log(this.stepLoopEntities.length);
     }
 
-    if (time % 3000 === 0) {
+    if (time % 6000 === 0) {
       const eat = this.map.createEat();
       this.addLoopEntity(eat);
       if (eat) {
@@ -85,6 +86,7 @@ export default class RoomEntity {
           (item) => item instanceof EatEntity && item.getID() === keyEat,
         );
         this.stepLoopEntities.splice(eatIndex, 1);
+        console.log(1);
         this.server.to(this.id).emit('destroy-eat', {
           id: keyEat,
         });
@@ -106,11 +108,46 @@ export default class RoomEntity {
       }
     }
 
-    // for (const [onePlayerKey, onePlayer] of this.players) {
-    //   for (const [twoPlayerKey, twoPlayer] of this.players) {
-    //
-    //   }
-    // }
+    for (const [onePlayerKey, onePlayer] of this.players) {
+      for (const [twoPlayerKey, twoPlayer] of this.players) {
+        if (onePlayer.getUser().getID() === twoPlayer.getUser().getID()) {
+          continue;
+        }
+
+        for (const twoPlayerSnakeBody of twoPlayer.getSnake().getBody()) {
+          if (
+            twoPlayerSnakeBody.y === onePlayer.getSnake().getY() &&
+            twoPlayerSnakeBody.x === onePlayer.getSnake().getX()
+          ) {
+            const spawnData = this.map.getSpawner(onePlayer.getUser().getID());
+
+            const playerIndex = this.stepLoopEntities.findIndex(
+              (entity) =>
+                entity instanceof SnakeEntity && entity.getID() === onePlayer.getSnake().getID(),
+            );
+            if (playerIndex !== -1) {
+              this.stepLoopEntities.splice(playerIndex, 1);
+
+              this.server.to(this.id).emit('dead', {
+                id: onePlayer.getUser().getID(),
+              });
+
+              setTimeout(() => {
+                onePlayer.setSnake(
+                  new SnakeEntity(this, spawnData.x, spawnData.y, spawnData.directions),
+                );
+
+                this.server.to(this.id).emit('respawn', {
+                  id: onePlayer.getUser().getID(),
+                });
+              }, 3000);
+            }
+
+            break;
+          }
+        }
+      }
+    }
 
     for (const ceil of this.map.getMap().physicalItems) {
       if (ceil.type !== MapItemTypeEnum.SOLID) {

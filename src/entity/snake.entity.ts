@@ -25,7 +25,6 @@ export class SnakeEntity implements IStepGameLoop {
   private readonly room: RoomEntity;
   private body: ISnakeBody[] = [];
   private direction: DirectionsEnum;
-  private oldDirection: DirectionsEnum;
   private isSpeedBonus: boolean = false;
   private currentResetTime: number = 0;
 
@@ -41,6 +40,10 @@ export class SnakeEntity implements IStepGameLoop {
 
   public getID() {
     return this.id;
+  }
+
+  public getBody() {
+    return this.body;
   }
 
   public activateSpeedBonus() {
@@ -91,7 +94,11 @@ export class SnakeEntity implements IStepGameLoop {
   }
 
   public addCeil() {
-    this.body.push(this.body[this.body.length - 1]);
+    const lastBodyItem = this.body[this.body.length - 1];
+    this.body.push({
+      x: lastBodyItem.x,
+      y: lastBodyItem.y,
+    });
   }
 
   private createBody(x: number, y: number) {
