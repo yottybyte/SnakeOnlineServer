@@ -1,11 +1,12 @@
-import {v4 as uuidv4} from 'uuid';
-import {Player} from './player.entity';
-import {UserEntity} from './user.entity';
-import {DirectionsEnum, SnakeEntity} from './snake.entity';
-import {MapEntity, MapItemTypeEnum} from './map.entity';
-import {Server} from 'socket.io';
-import {IStepGameLoop} from "../interfaces/IStepGameLoop";
-import BulletEntity from "./bullet.entity";
+import { v4 as uuidv4 } from 'uuid';
+import { Player } from './player.entity';
+import { UserEntity } from './user.entity';
+import { SnakeEntity } from './snake.entity';
+import { MapEntity, MapItemTypeEnum } from './map.entity';
+import { Server } from 'socket.io';
+import { IStepGameLoop } from '../interfaces/IStepGameLoop';
+import BulletEntity from './bullet.entity';
+import { EatEntity } from './eat.entity';
 
 export default class RoomEntity {
   private server: Server;
@@ -18,13 +19,11 @@ export default class RoomEntity {
   private readonly stepLoopEntities: IStepGameLoop[] = [];
   private lifeTime: number = 0;
 
-
   constructor(users: UserEntity[], server: Server) {
     this.server = server;
     this.id = uuidv4();
 
     this.map = new MapEntity(48, 24);
-
 
     users.forEach((user) => {
       this.addUser(user);
@@ -47,7 +46,7 @@ export default class RoomEntity {
           time: startTime,
           eat: [],
           players: this.getPlayers(),
-          bullets: this.getBullets()
+          bullets: this.getBullets(),
         });
       }
       const diffTime = Date.now() - startTime;
@@ -60,18 +59,94 @@ export default class RoomEntity {
     if (time % 1000 === 0) {
       this.server.to(this.id).emit('time-sec');
     }
+
+    if (time % 3000 === 0) {
+      const eat = this.map.createEat();
+      this.addLoopEntity(eat);
+      if (eat) {
+        this.server.to(this.id).emit('spawn-eat', {
+          id: eat.getID(),
+          x: eat.getX(),
+          y: eat.getY(),
+        });
+      }
+    }
+
     // Расчет логики
     for (const entity of this.stepLoopEntities) {
       entity.gameStep(this.lifeTime);
     }
 
-    // Считаем коллизии по стенам
+    // Считаем коллизии еды
+    for (const [keyEat, eat] of this.map.getEats()) {
+      if (eat.isDead()) {
+        this.map.destroyEat(keyEat);
+        const eatIndex = this.stepLoopEntities.findIndex(
+          (item) => item instanceof EatEntity && item.getID() === keyEat,
+        );
+        this.stepLoopEntities.splice(eatIndex, 1);
+        this.server.to(this.id).emit('destroy-eat', {
+          id: keyEat,
+        });
+      }
+
+      for (const player of this.players.values()) {
+        const snake = player.getSnake();
+        if (eat.getX() === snake.getX() && eat.getY() === snake.getY()) {
+          this.map.destroyEat(keyEat);
+          const eatIndex = this.stepLoopEntities.findIndex(
+            (item) => item instanceof EatEntity && item.getID() === keyEat,
+          );
+          this.stepLoopEntities.splice(eatIndex, 1);
+          player.getSnake().addCeil();
+          this.server.to(this.id).emit('destroy-eat', {
+            id: keyEat,
+          });
+        }
+      }
+    }
+
+    // for (const [onePlayerKey, onePlayer] of this.players) {
+    //   for (const [twoPlayerKey, twoPlayer] of this.players) {
+    //
+    //   }
+    // }
+
     for (const ceil of this.map.getMap().physicalItems) {
       if (ceil.type !== MapItemTypeEnum.SOLID) {
         continue;
       }
       for (const entity of this.stepLoopEntities) {
         if (ceil.x === entity.getX() && ceil.y === entity.getY()) {
+          if (entity instanceof SnakeEntity) {
+            const player = Array.from(this.players.values()).find(
+              (player) => player.getSnake().getID() === entity.getID(),
+            );
+
+            if (player) {
+              const spawnData = this.map.getSpawner(player.getUser().getID());
+
+              const playerIndex = this.stepLoopEntities.findIndex(
+                (entity) =>
+                  entity instanceof SnakeEntity && entity.getID() === player.getSnake().getID(),
+              );
+              this.stepLoopEntities.splice(playerIndex, 1);
+
+              this.server.to(this.id).emit('dead', {
+                id: player.getUser().getID(),
+              });
+
+              setTimeout(() => {
+                player.setSnake(
+                  new SnakeEntity(this, spawnData.x, spawnData.y, spawnData.directions),
+                );
+
+                this.server.to(this.id).emit('respawn', {
+                  id: player.getUser().getID(),
+                });
+              }, 3000);
+            }
+          }
           if (entity instanceof BulletEntity) {
             entity.destroy();
           }
@@ -88,26 +163,40 @@ export default class RoomEntity {
   }
 
   public addUser(user: UserEntity) {
-    const player = new Player(
-      this,
-      user,
-      new SnakeEntity(this,8 + this.players.size * 2, 10, DirectionsEnum.UP),
-    );
+    const spawnData = this.map.getSpawner(user.getID());
+
+    const player = new Player(this, user);
+    player.setSnake(new SnakeEntity(this, spawnData.x, spawnData.y, spawnData.directions));
     user.addRoom(this.id);
 
     user.getSocket().broadcast.to(this.id).emit('joined-player', player.serialize());
     this.players.set(user.getID(), player);
   }
 
-  public deleteBullet(id: string): void {
-     const bulletIndex = this.stepLoopEntities
-       .findIndex((entity) => entity instanceof BulletEntity && entity.getId() === id);
-     this.stepLoopEntities.splice(bulletIndex, 1);
-     this.server.to(this.id).emit('delete-bullet', {
-       id: id
-     });
+  public removeUser(userID: string) {
+    const player = this.players.get(userID);
+    if (player) {
+      const playerIndex = this.stepLoopEntities.findIndex(
+        (entity) => entity instanceof SnakeEntity && entity.getID() === player.getSnake().getID(),
+      );
+      this.stepLoopEntities.splice(playerIndex, 1);
+      this.players.delete(userID);
+
+      this.server.to(this.id).emit('delete-player', {
+        id: userID,
+      });
+    }
   }
 
+  public deleteBullet(id: string): void {
+    const bulletIndex = this.stepLoopEntities.findIndex(
+      (entity) => entity instanceof BulletEntity && entity.getId() === id,
+    );
+    this.stepLoopEntities.splice(bulletIndex, 1);
+    this.server.to(this.id).emit('delete-bullet', {
+      id: id,
+    });
+  }
 
   public getID() {
     return this.id;
@@ -124,8 +213,10 @@ export default class RoomEntity {
     return Array.from(this.players.values()).map((player) => player.serialize());
   }
   public getBullets() {
-    return this.stepLoopEntities.filter(entity => entity instanceof BulletEntity).map((bullet: BulletEntity) => {
-      return bullet.serialize();
-    });
+    return this.stepLoopEntities
+      .filter((entity) => entity instanceof BulletEntity)
+      .map((bullet: BulletEntity) => {
+        return bullet.serialize();
+      });
   }
 }

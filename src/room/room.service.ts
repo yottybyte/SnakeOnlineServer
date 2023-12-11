@@ -1,9 +1,6 @@
 import { Injectable, Scope } from '@nestjs/common';
-import { Server, Socket } from 'socket.io';
-import { Player } from '../entity/player.entity';
+import { Server } from 'socket.io';
 import RoomEntity from '../entity/room.entity';
-import { WebSocketServer } from '@nestjs/websockets';
-import { UserEntity } from '../entity/user.entity';
 
 // interface PlayerRoom {
 //   snake: Snake;

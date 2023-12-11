@@ -1,8 +1,8 @@
-import { DirectionsEnum } from "./snake.entity";
-import { IStepGameLoop } from "../interfaces/IStepGameLoop";
-import { IStateSerialize } from "../interfaces/IStateSerialize";
+import { DirectionsEnum } from './snake.entity';
+import { IStepGameLoop } from '../interfaces/IStepGameLoop';
+import { IStateSerialize } from '../interfaces/IStateSerialize';
 import { v4 as uuidv4 } from 'uuid';
-import RoomEntity from "./room.entity";
+import RoomEntity from './room.entity';
 
 export default class BulletEntity implements IStepGameLoop, IStateSerialize {
   protected mX: number;
@@ -14,7 +14,14 @@ export default class BulletEntity implements IStepGameLoop, IStateSerialize {
   protected readonly room: RoomEntity;
   private readonly id: string;
 
-  constructor(room: RoomEntity, x: number, y: number, direction: DirectionsEnum, id: string, color: number) {
+  constructor(
+    room: RoomEntity,
+    x: number,
+    y: number,
+    direction: DirectionsEnum,
+    id: string,
+    color: number,
+  ) {
     this.mX = x;
     this.mY = y;
 
@@ -30,10 +37,18 @@ export default class BulletEntity implements IStepGameLoop, IStateSerialize {
   gameStep(time: number): void {
     if (time % 50 === 0) {
       switch (this.directionMove) {
-        case DirectionsEnum.RIGHT: this.mX++; break;
-        case DirectionsEnum.UP: this.mY--; break;
-        case DirectionsEnum.LEFT: this.mX--; break;
-        case DirectionsEnum.DOWN: this.mY++; break;
+        case DirectionsEnum.RIGHT:
+          this.mX++;
+          break;
+        case DirectionsEnum.UP:
+          this.mY--;
+          break;
+        case DirectionsEnum.LEFT:
+          this.mX--;
+          break;
+        case DirectionsEnum.DOWN:
+          this.mY++;
+          break;
       }
     }
   }
@@ -45,7 +60,7 @@ export default class BulletEntity implements IStepGameLoop, IStateSerialize {
       id: this.id,
       direction: this.directionMove,
       color: this.color,
-    }
+    };
   }
 
   public destroy() {

@@ -7,7 +7,6 @@ import {
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
-  WsResponse,
 } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
 import { RoomService } from './room/room.service';
@@ -25,11 +24,13 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
 
   @WebSocketServer()
   server: Server;
-  afterInit(server: Server) {}
+  afterInit() {}
 
-  handleDisconnect(client: Socket) {}
+  handleDisconnect(client: Socket) {
+    this.roomService.getFirstRoom()?.removeUser(client.id);
+  }
 
-  handleConnection(client: Socket, ...args: any[]) {
+  handleConnection(client: Socket) {
     console.log(client.id);
     client.emit('connected', client.id);
   }
@@ -61,16 +62,12 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
   }
 
   @SubscribeMessage('speedBonus')
-  activateSpeedBonus(
-    @ConnectedSocket() client: Socket,
-  ) {
+  activateSpeedBonus(@ConnectedSocket() client: Socket) {
     this.roomService.getFirstRoom().getPlayer(client.id).getSnake().activateSpeedBonus();
   }
 
   @SubscribeMessage('shot')
-  createShot(
-    @ConnectedSocket() client: Socket,
-  ) {
+  createShot(@ConnectedSocket() client: Socket) {
     this.roomService.getFirstRoom().getPlayer(client.id).getSnake().spawnBullet();
   }
 }

@@ -1,16 +1,15 @@
 import { UserEntity } from './user.entity';
 import { SnakeEntity } from './snake.entity';
-import RoomEntity from "./room.entity";
+import RoomEntity from './room.entity';
 
 export class Player {
   private score: number = 0;
   private readonly user: UserEntity;
-  private readonly snake: SnakeEntity;
+  private snake: SnakeEntity;
   private readonly room: RoomEntity;
 
-  constructor(room: RoomEntity, user: UserEntity, snake: SnakeEntity) {
+  constructor(room: RoomEntity, user: UserEntity) {
     this.user = user;
-    this.snake = snake;
     this.room = room;
   }
 
@@ -20,6 +19,10 @@ export class Player {
 
   public getSnake() {
     return this.snake;
+  }
+
+  public setSnake(snake: SnakeEntity) {
+    this.snake = snake;
   }
 
   public serialize() {
