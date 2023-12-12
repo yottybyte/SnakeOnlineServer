@@ -3,6 +3,7 @@ import { stringToColour } from '../utils/stringToColour';
 import { IStepGameLoop } from '../interfaces/IStepGameLoop';
 import RoomEntity from './room.entity';
 import BulletEntity from './bullet.entity';
+import {Player} from "./player.entity";
 
 export enum DirectionsEnum {
   UP = 'up',
@@ -23,21 +24,24 @@ export class SnakeEntity implements IStepGameLoop {
   private readonly id: string;
   private readonly color: number;
   private readonly room: RoomEntity;
+  private readonly player: Player;
   private body: ISnakeBody[] = [];
   private direction: DirectionsEnum;
+  private oldDirection: DirectionsEnum | null = null;
   private isSpeedBonus: boolean = false;
   private currentResetTime: number = 0;
+  private isMoveStopped: boolean = false;
 
-  constructor(room: RoomEntity, mX: number, mY: number, initialDirection: DirectionsEnum) {
+  constructor(room: RoomEntity, player: Player, mX: number, mY: number, initialDirection: DirectionsEnum) {
     this.id = uuidv4();
     this.color = stringToColour(this.id);
     this.direction = initialDirection;
     this.room = room;
+    this.player = player;
 
     this.createBody(mX, mY);
     this.room.addLoopEntity(this);
   }
-
   public getID() {
     return this.id;
   }
@@ -65,6 +69,10 @@ export class SnakeEntity implements IStepGameLoop {
     this.room.addLoopEntity(
       new BulletEntity(this.room, snakeHead.x, snakeHead.y, this.direction, this.id, this.color),
     );
+    this.body.splice(this.body.length - 1, 1);
+    if (this.body.length < 3 && this.player) {
+      this.player.dead();
+    }
   }
 
   public isSpeedBonusActive(): boolean {
@@ -74,10 +82,11 @@ export class SnakeEntity implements IStepGameLoop {
   // Тут БАГ с возможностью самоубиться, из за последней строки
   public setDirection(newDirection: DirectionsEnum) {
     if (
-      (this.direction === DirectionsEnum.UP && newDirection === DirectionsEnum.DOWN) ||
-      (this.direction === DirectionsEnum.DOWN && newDirection === DirectionsEnum.UP) ||
-      (this.direction === DirectionsEnum.LEFT && newDirection === DirectionsEnum.RIGHT) ||
-      (this.direction === DirectionsEnum.RIGHT && newDirection === DirectionsEnum.LEFT)
+      !this.oldDirection ||
+      (this.oldDirection === DirectionsEnum.UP && newDirection === DirectionsEnum.DOWN) ||
+      (this.oldDirection === DirectionsEnum.DOWN && newDirection === DirectionsEnum.UP) ||
+      (this.oldDirection === DirectionsEnum.LEFT && newDirection === DirectionsEnum.RIGHT) ||
+      (this.oldDirection === DirectionsEnum.RIGHT && newDirection === DirectionsEnum.LEFT)
     ) {
       return;
     }
@@ -123,6 +132,9 @@ export class SnakeEntity implements IStepGameLoop {
   }
 
   protected move() {
+    if (this.isMoveStopped) {
+      return;
+    }
     for (let i = this.body.length - 1; i >= 0; i--) {
       // Голова
       if (i === 0) {
@@ -146,6 +158,7 @@ export class SnakeEntity implements IStepGameLoop {
       this.body[i].x = this.body[i - 1].x;
       this.body[i].y = this.body[i - 1].y;
     }
+    this.oldDirection = this.direction;
   }
 
   public serialize() {
@@ -162,5 +175,15 @@ export class SnakeEntity implements IStepGameLoop {
 
   public getY(): number {
     return this.body[0].y;
+  }
+
+  public waitRespawn(): void {
+    this.isMoveStopped = true;
+    setTimeout(() => {
+      this.isMoveStopped = false;
+      this.room.server.to(this.room.id).emit('respawn', {
+        id: this.player.getUser().getID(),
+      });
+    }, 1500);
   }
 }

@@ -25,6 +25,27 @@ export class Player {
     this.snake = snake;
   }
 
+  public dead() {
+    const spawnData = this.room.map.getSpawner(this.getUser().getID());
+    const playerIndex = this.room.stepLoopEntities.findIndex(
+      (entity) =>
+        entity instanceof SnakeEntity && entity.getID() === this.getSnake().getID(),
+    );
+    if (playerIndex !== -1) {
+      this.room.stepLoopEntities.splice(playerIndex, 1);
+
+      this.room.server.to(this.room.id).emit('dead', {
+        id: this.getUser().getID(),
+      });
+      setTimeout(() => {
+        this.setSnake(
+          new SnakeEntity(this.room, this, spawnData.x, spawnData.y, spawnData.directions),
+        );
+        this.snake.waitRespawn();
+      }, 500)
+    }
+  }
+
   public serialize() {
     return {
       id: this.user.getID(),

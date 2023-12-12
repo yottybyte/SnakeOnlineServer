@@ -9,14 +9,14 @@ import BulletEntity from './bullet.entity';
 import { EatEntity } from './eat.entity';
 
 export default class RoomEntity {
-  private server: Server;
+  public server: Server;
 
   private readonly STEP_INTERVAL = 25;
 
-  private readonly id: string;
-  private readonly map: MapEntity;
-  private readonly players: Map<string, Player> = new Map();
-  private readonly stepLoopEntities: IStepGameLoop[] = [];
+  public readonly id: string;
+  public readonly map: MapEntity;
+  public readonly players: Map<string, Player> = new Map();
+  public readonly stepLoopEntities: IStepGameLoop[] = [];
   private lifeTime: number = 0;
 
   constructor(users: UserEntity[], server: Server) {
@@ -58,7 +58,6 @@ export default class RoomEntity {
   private handleGameLoop(time: number) {
     if (time % 1000 === 0) {
       this.server.to(this.id).emit('time-sec');
-      console.log(this.stepLoopEntities.length);
     }
 
     if (time % 6000 === 0) {
@@ -86,7 +85,6 @@ export default class RoomEntity {
           (item) => item instanceof EatEntity && item.getID() === keyEat,
         );
         this.stepLoopEntities.splice(eatIndex, 1);
-        console.log(1);
         this.server.to(this.id).emit('destroy-eat', {
           id: keyEat,
         });
@@ -119,30 +117,7 @@ export default class RoomEntity {
             twoPlayerSnakeBody.y === onePlayer.getSnake().getY() &&
             twoPlayerSnakeBody.x === onePlayer.getSnake().getX()
           ) {
-            const spawnData = this.map.getSpawner(onePlayer.getUser().getID());
-
-            const playerIndex = this.stepLoopEntities.findIndex(
-              (entity) =>
-                entity instanceof SnakeEntity && entity.getID() === onePlayer.getSnake().getID(),
-            );
-            if (playerIndex !== -1) {
-              this.stepLoopEntities.splice(playerIndex, 1);
-
-              this.server.to(this.id).emit('dead', {
-                id: onePlayer.getUser().getID(),
-              });
-
-              setTimeout(() => {
-                onePlayer.setSnake(
-                  new SnakeEntity(this, spawnData.x, spawnData.y, spawnData.directions),
-                );
-
-                this.server.to(this.id).emit('respawn', {
-                  id: onePlayer.getUser().getID(),
-                });
-              }, 3000);
-            }
-
+            onePlayer.dead();
             break;
           }
         }
@@ -161,27 +136,7 @@ export default class RoomEntity {
             );
 
             if (player) {
-              const spawnData = this.map.getSpawner(player.getUser().getID());
-
-              const playerIndex = this.stepLoopEntities.findIndex(
-                (entity) =>
-                  entity instanceof SnakeEntity && entity.getID() === player.getSnake().getID(),
-              );
-              this.stepLoopEntities.splice(playerIndex, 1);
-
-              this.server.to(this.id).emit('dead', {
-                id: player.getUser().getID(),
-              });
-
-              setTimeout(() => {
-                player.setSnake(
-                  new SnakeEntity(this, spawnData.x, spawnData.y, spawnData.directions),
-                );
-
-                this.server.to(this.id).emit('respawn', {
-                  id: player.getUser().getID(),
-                });
-              }, 3000);
+              player.dead()
             }
           }
           if (entity instanceof BulletEntity) {
@@ -203,7 +158,7 @@ export default class RoomEntity {
     const spawnData = this.map.getSpawner(user.getID());
 
     const player = new Player(this, user);
-    player.setSnake(new SnakeEntity(this, spawnData.x, spawnData.y, spawnData.directions));
+    player.setSnake(new SnakeEntity(this, player, spawnData.x, spawnData.y, spawnData.directions));
     user.addRoom(this.id);
 
     user.getSocket().broadcast.to(this.id).emit('joined-player', player.serialize());
@@ -218,6 +173,7 @@ export default class RoomEntity {
       );
       this.stepLoopEntities.splice(playerIndex, 1);
       this.players.delete(userID);
+      this.map.clearSpawner(userID);
 
       this.server.to(this.id).emit('delete-player', {
         id: userID,

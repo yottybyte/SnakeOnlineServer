@@ -70,6 +70,14 @@ export class MapEntity {
     return absoluteRandomEmptySpawner;
   }
 
+  public clearSpawner(spawnID: string): void {
+    const candidate = this.spawners.find((spawn) => spawn.id === spawnID);
+
+    if (candidate) {
+      candidate.id = null;
+    }
+  }
+
   private physicalMapGenerate(width: number, height: number): IMapPhysicalItem[] {
     const items = [];
     const w = width * 2;
