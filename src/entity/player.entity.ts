@@ -46,6 +46,14 @@ export class Player {
     }
   }
 
+  // укорачиваем змейку
+  public shorten(start: number) {
+    if (start === 0) {
+      start = 1;
+    }
+    this.getSnake().getBody().splice(start, this.getSnake().getBody().length - start);
+  }
+
   public serialize() {
     return {
       id: this.user.getID(),

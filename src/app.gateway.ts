@@ -70,4 +70,12 @@ export class AppGateway implements OnGatewayInit, OnGatewayConnection, OnGateway
   createShot(@ConnectedSocket() client: Socket) {
     this.roomService.getFirstRoom().getPlayer(client.id).getSnake().spawnBullet();
   }
+
+  @SubscribeMessage('stats-request')
+  requestStatistic(@ConnectedSocket() client: Socket) {
+    const serverStats = this.roomService.getFirstRoom()?.getServerStats() ?? null;
+    if (serverStats) {
+      client.emit('stats-response', serverStats);
+    }
+  }
 }

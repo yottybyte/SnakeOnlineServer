@@ -78,4 +78,8 @@ export default class BulletEntity implements IStepGameLoop, IStateSerialize {
   public getId(): string {
     return this.id;
   }
+
+  public getPlayerId(): string {
+    return this.playerId;
+  }
 }

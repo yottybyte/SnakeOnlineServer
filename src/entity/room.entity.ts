@@ -17,7 +17,8 @@ export default class RoomEntity {
   public readonly map: MapEntity;
   public readonly players: Map<string, Player> = new Map();
   public readonly stepLoopEntities: IStepGameLoop[] = [];
-  private lifeTime: number = 0;
+  protected lifeTime: number = 0;
+  protected freeLoadPercents: number = 100;
 
   constructor(users: UserEntity[], server: Server) {
     this.server = server;
@@ -51,7 +52,10 @@ export default class RoomEntity {
       }
       const diffTime = Date.now() - startTime;
       this.lifeTime += this.STEP_INTERVAL;
-      await this.snooze(this.STEP_INTERVAL - diffTime);
+      const freeTime = this.STEP_INTERVAL - diffTime;
+      const onePercent = 100 / this.STEP_INTERVAL;
+      this.freeLoadPercents = 100 - (onePercent * freeTime);
+      await this.snooze(freeTime);
     }
   }
 
@@ -90,6 +94,7 @@ export default class RoomEntity {
         });
       }
 
+      // Коллизии с едой
       for (const player of this.players.values()) {
         const snake = player.getSnake();
         if (eat.getX() === snake.getX() && eat.getY() === snake.getY()) {
@@ -106,24 +111,52 @@ export default class RoomEntity {
       }
     }
 
-    for (const [onePlayerKey, onePlayer] of this.players) {
-      for (const [twoPlayerKey, twoPlayer] of this.players) {
-        if (onePlayer.getUser().getID() === twoPlayer.getUser().getID()) {
+    // Коллизии змеек
+    for (const [onePlayerKey, player] of this.players) {
+      // со змейками
+      for (const [twoPlayerKey, otherPlayer] of this.players) {
+        if (player.getUser().getID() === otherPlayer.getUser().getID()) {
           continue;
         }
 
-        for (const twoPlayerSnakeBody of twoPlayer.getSnake().getBody()) {
+        for (const twoPlayerSnakeBody of otherPlayer.getSnake().getBody()) {
           if (
-            twoPlayerSnakeBody.y === onePlayer.getSnake().getY() &&
-            twoPlayerSnakeBody.x === onePlayer.getSnake().getX()
+            twoPlayerSnakeBody.y === player.getSnake().getY() &&
+            twoPlayerSnakeBody.x === player.getSnake().getX()
           ) {
-            onePlayer.dead();
+            player.dead();
             break;
           }
         }
       }
+      // Со своей змейкой
+      for (let i = 0; i < player.getSnake().getBody().length; i++) {
+        const bodyItem = player.getSnake().getBody()[i];
+        if (i > 0 && player.getSnake().getX() === bodyItem.x && player.getSnake().getY() === bodyItem.y) {
+          player.dead();
+          break;
+        }
+      }
+      // С пулькой
+      const bullets: BulletEntity[] = this.stepLoopEntities.filter(item => item instanceof BulletEntity) as BulletEntity[];
+      for (const bullet of bullets) {
+        for (let i = 0; i < player.getSnake().getBody().length; i++) {
+          const bodyItem = player.getSnake().getBody()[i];
+          if (player.getUser().getID() !== bullet.getPlayerId() && bodyItem.x === bullet.getX() && bodyItem.y === bullet.getY()) {
+            bullet.destroy();
+            player.shorten(i);
+            if (player.getSnake().getBody().length < 3) {
+              player.dead();
+            }
+            break;
+          }
+        }
+      }
+
+      // С едой туду
     }
 
+    // Коллизии со стенами
     for (const ceil of this.map.getMap().physicalItems) {
       if (ceil.type !== MapItemTypeEnum.SOLID) {
         continue;
@@ -191,6 +224,12 @@ export default class RoomEntity {
     });
   }
 
+  public getServerStats() {
+    return {
+      serverLoad: this.freeLoadPercents,
+      timestamp: Date.now(),
+    }
+  }
   public getID() {
     return this.id;
   }

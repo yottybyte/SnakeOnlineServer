@@ -67,7 +67,7 @@ export class SnakeEntity implements IStepGameLoop {
     this.currentResetTime = this.BULLET_RESET;
     const snakeHead = this.body[0];
     this.room.addLoopEntity(
-      new BulletEntity(this.room, snakeHead.x, snakeHead.y, this.direction, this.id, this.color),
+      new BulletEntity(this.room, snakeHead.x, snakeHead.y, this.direction, this.player.getUser().getID(), this.color),
     );
     this.body.splice(this.body.length - 1, 1);
     if (this.body.length < 3 && this.player) {
@@ -112,9 +112,20 @@ export class SnakeEntity implements IStepGameLoop {
 
   private createBody(x: number, y: number) {
     this.body = [];
-    for (let i = 1; i <= 5; i++) {
-      this.body.push({ x: x, y: y + i });
+    for (let i = 1; i <= 3; i++) {
+      switch (this.direction) {
+        case DirectionsEnum.RIGHT:
+          this.body.push({ x: x - i, y: y }); break;
+        case DirectionsEnum.LEFT:
+          this.body.push({ x: x + i, y: y }); break;
+        case DirectionsEnum.UP:
+          this.body.push({ x: x, y: y + i }); break;
+        case DirectionsEnum.DOWN:
+          this.body.push({ x: x, y: y - i }); break;
+      }
     }
+
+
   }
 
   public gameStep(time: number) {
